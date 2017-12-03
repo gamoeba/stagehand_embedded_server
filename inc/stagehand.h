@@ -5,7 +5,7 @@
  * This header file is included to define _EXPORT_.
  */
 #include <stdbool.h>
-//#include <tizen.h>
+#include <tizen.h>
 
 
 #ifdef __cplusplus

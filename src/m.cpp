@@ -20,7 +20,8 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-//#include <linux/un.h>
+#include <dali.h>
+#include <linux/un.h>
 #include <sys/types.h>
 #include <fcntl.h>
 #include <sys/eventfd.h>
@@ -28,8 +29,10 @@
 #include <string.h>
 #include "stagehand.h"
 #include <app_common.h>
+#include <dlog/dlog.h>
 
 #include <unzip.h>
+#include "libwebsockets.h"
 
 extern "C" int server_main(const char*path, int port);
 
@@ -42,7 +45,7 @@ pthread_cond_t cv;
 pthread_mutex_t mp;
 
 void event_thread_callback() {
-	std::string json = Stagehand::Automation::DumpScene();
+	std::string json = "";//Stagehand::Automation::DumpScene();
 	const char* ptr = json.c_str();
 	int len = json.length();
 	int written = 0;
@@ -65,12 +68,12 @@ void* connection_handler(void* info)
 	nbytes = read(current_connection_fd, buffer, 256);
 	buffer[nbytes] = 0;
 
-	TriggerEventFactory factory;
+	//TriggerEventFactory factory;
     // create a trigger event that automatically deletes itself after the callback has run in the main thread
-    TriggerEventInterface *interface = factory.CreateTriggerEvent( MakeCallback(event_thread_callback), TriggerEventInterface::DELETE_AFTER_TRIGGER );
+    //TriggerEventInterface *interface = factory.CreateTriggerEvent( MakeCallback(event_thread_callback), TriggerEventInterface::DELETE_AFTER_TRIGGER );
 
     // asynchronous call, the call back will be run sometime later on the main thread
-    interface->Trigger();
+ //   interface->Trigger();
 
 	return NULL;
 }
@@ -137,15 +140,15 @@ void startListeningSocketThread() {
 void startServer()
 {
 //	printf ("Starting Stagehand server\n");
-	//dlog_print(DLOG_INFO, "Stagehand", "start server");
+	dlog_print(DLOG_INFO, "Stagehand", "start server");
 	const char* path = "/";
-	//dlog_print(DLOG_INFO, "Stagehand", "shared path: %s", path);
+	dlog_print(DLOG_INFO, "Stagehand", "shared path: %s", path);
 
 	pid_t pid = fork();
 //	char respath[256];
 
 	if (pid==0) {
-		//dlog_print(DLOG_INFO, "Stagehand", "start server forked");
+		dlog_print(DLOG_INFO, "Stagehand", "start server forked");
 
 		//int res = daemon(0,0);
 		//if (res !=0 ) {
@@ -155,7 +158,7 @@ void startServer()
 		//execlp("stagehandserver", "stagehandserver", respath, "--port=8080", NULL);
 
 
-		int res = server_main(path, 7690);
+		int res = server_main(path, 7681);
 		dlog_print(DLOG_INFO, "Stagehand", "server finished");
 
 		exit(res);
@@ -165,37 +168,24 @@ void startServer()
 }
 
 extern "C" {
+void lwsl_emit_dlog(int level, const char *line)
+{
+	log_priority syslog_level = DLOG_DEBUG;
 
-    int main(int argc, char** argv)
-    {
-        startServer();        
-
-        return 0;
-    }
+	switch (level) {
+	case LLL_ERR:
+		syslog_level = DLOG_ERROR;
+		break;
+	case LLL_WARN:
+		syslog_level = DLOG_WARN;
+		break;
+	case LLL_NOTICE:
+		syslog_level = DLOG_INFO;
+		break;
+	case LLL_INFO:
+		syslog_level = DLOG_INFO;
+		break;
+	}
+	dlog_print(syslog_level,"libwebsockets", "%s", line);
 }
-//// TODO Can the code below be written to not generate these warnings
-//#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-//#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-//#pragma GCC diagnostic ignored "-Wuninitialized"
-//
-//void Application::MainLoop()
-//{
-//  startServer();
-//  startListeningSocketThread();
-//  void(Application::*mainloop_ptr)();
-//
-//  *(void**)(&mainloop_ptr) = dlsym(RTLD_NEXT, "_ZN4Dali11Application8MainLoopEv");
-//  Application& instance = *this;
-//  (instance.*mainloop_ptr)();
-//}
-//
-//void Application::MainLoop(Configuration::ContextLoss configuration)
-//{
-//  startServer();
-//  startListeningSocketThread();
-//  void(Application::*mainloop_ptr)(Configuration::ContextLoss);
-//
-//  *(void**)(&mainloop_ptr) = dlsym(RTLD_NEXT, "_ZN4Dali11Application8MainLoopENS_13Configuration11ContextLossE");
-//  Application& instance = *this;
-//  (instance.*mainloop_ptr)(configuration);
-//}
+}

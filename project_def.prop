@@ -9,7 +9,7 @@ type = sharedLib
 profile = wearable-3.0
 
 # C/CPP Sources
-USER_SRCS = src/libwebsockets/lws-plat-unix.c src/libwebsockets/output.c src/libwebsockets/client.c src/server/stagehandserver-sh.c src/libwebsockets/client-parser.c src/libwebsockets/extension-permessage-deflate.c src/stagehand.c src/libwebsockets/alloc.c src/libwebsockets/client-handshake.c src/libwebsockets/daemonize.c src/libwebsockets/parsers.c src/libwebsockets/libwebsockets.c src/libwebsockets/context.c src/libwebsockets/getifaddrs.c src/libwebsockets/header.c src/server/stagehandserver.c src/libwebsockets/service.c src/libwebsockets/extension.c src/libwebsockets/base64-decode.c src/libwebsockets/handshake.c src/libwebsockets/server.c src/libwebsockets/sha-1.c src/libwebsockets/server-handshake.c src/server/stagehandserver-http.c src/libwebsockets/pollfd.c src/main.cpp src/automation.cpp 
+USER_SRCS = src/server/stagehandserver.c src/server/stagehandserver-sh.c src/stagehand.c src/server/stagehand.c src/server/stagehandserver-http.c src/automation.cpp src/m.cpp 
 
 # EDC Sources
 USER_EDCS =  
@@ -26,10 +26,10 @@ USER_UNDEFS =
 USER_CPP_UNDEFS = 
 
 # User Libraries
-USER_LIBS = 
+USER_LIBS = websockets 
 
 # User Objects
-USER_OBJS = lib/stagehandzip.o
+USER_OBJS = 
 
 # User Includes
 ## C Compiler

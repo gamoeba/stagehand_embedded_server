@@ -22,7 +22,7 @@
 
 int close_testing;
 int max_poll_elements;
-int debug_level = 7;
+int debug_level = 127;
 
 #ifdef EXTERNAL_POLL
 struct lws_pollfd *pollfds;
@@ -39,7 +39,7 @@ extern struct lws_plat_file_ops fops_zip;
 
 /* http server gets files from this path */
 //#define LOCAL_RESOURCE_PATH INSTALL_DATADIR"/libwebsockets-test-server"
-char *resource_path = "";//LOCAL_RESOURCE_PATH;
+char *resource_path = "/";//LOCAL_RESOURCE_PATH;
 
 /* singlethreaded version --> no locks */
 
@@ -160,13 +160,15 @@ int server_main(const char *path, int port)
  	int daemonize = 0;
 #endif
 
-	/*
+
+ 	/*
 	 * take care to zero down the info struct, he contains random garbaage
 	 * from the stack otherwise
 	 */
 	memset(&info, 0, sizeof info);
+
 	info.port = port;
-	strcpy(resource_path,path);
+	//strcpy(resource_path,path);
 
 #if !defined(LWS_NO_DAEMONIZE) && !defined(WIN32)
 	/*
@@ -182,15 +184,14 @@ int server_main(const char *path, int port)
 
 	signal(SIGINT, sighandler);
 
-#ifndef _WIN32
-	/* we will only try to log things according to our debug_level */
-	setlogmask(LOG_UPTO (LOG_DEBUG));
-	openlog("lwsts", syslog_options, LOG_DAEMON);
-#endif
+//#ifndef _WIN32
+//	/* we will only try to log things according to our debug_level */
+//	setlogmask(LOG_UPTO (LOG_DEBUG));
+//	openlog("lwsts", syslog_options, LOG_DAEMON);
+//#endif
 
 	/* tell the library what debug level to emit and to send it to syslog */
-	lws_set_log_level(debug_level, lwsl_emit_syslog);
-
+	lws_set_log_level(debug_level, lwsl_emit_dlog);
 	lwsl_notice("libwebsockets test server - license LGPL2.1+SLE\n");
 	lwsl_notice("(C) Copyright 2010-2016 Andy Green <andy@warmcat.com>\n");
 
@@ -209,6 +210,7 @@ int server_main(const char *path, int port)
 	info.protocols = protocols;
 	info.ssl_cert_filepath = NULL;
 	info.ssl_private_key_filepath = NULL;
+	//info.ws_ping_pong_interval = pp_secs;
 
 	if (use_ssl) {
 		if (strlen(resource_path) > sizeof(cert_path) - 32) {
@@ -233,8 +235,8 @@ int server_main(const char *path, int port)
 	}
 	info.gid = gid;
 	info.uid = uid;
-	info.max_http_header_pool = 16;
-	info.options = opts | LWS_SERVER_OPTION_VALIDATE_UTF8;
+	info.max_http_header_pool = 256;
+	info.options = opts | LWS_SERVER_OPTION_VALIDATE_UTF8 | LWS_SERVER_OPTION_EXPLICIT_VHOSTS;
 	info.extensions = exts;
 	info.timeout_secs = 5;
 	info.ssl_cipher_list = "ECDHE-ECDSA-AES256-GCM-SHA384:"
@@ -256,6 +258,13 @@ int server_main(const char *path, int port)
 		return -1;
 	}
 
+	vhost = lws_create_vhost(context, &info);
+	if (!vhost) {
+		lwsl_err("vhost creation failed\n");
+		return -1;
+	}
+
+
 	/* this shows how to override the lws file operations.  You don't need
 	 * to do any of this unless you have a reason (eg, want to serve
 	 * compressed files without decompressing the whole archive)
@@ -270,70 +279,12 @@ int server_main(const char *path, int port)
 	lws_get_fops(context)->write = NULL;
 
 
-	vhost = lws_create_vhost(context, &info);
-	if (!vhost) {
-		lwsl_err("vhost creation failed\n");
-		return -1;
-	}
-
-
 	n = 0;
+	//force_exit = 1;
 	while (n >= 0 && !force_exit) {
-		struct timeval tv;
-
-		gettimeofday(&tv, NULL);
-
-		/*
-		 * This provokes the LWS_CALLBACK_SERVER_WRITEABLE for every
-		 * live websocket connection using the DUMB_INCREMENT protocol,
-		 * as soon as it can take more packets (usually immediately)
-		 */
-
-		ms = (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-		if ((ms - oldms) > 50) {
-			lws_callback_on_writable_all_protocol(context,
-				&protocols[PROTOCOL_DUMB_INCREMENT]);
-			oldms = ms;
-		}
-
-#ifdef EXTERNAL_POLL
-		/*
-		 * this represents an existing server's single poll action
-		 * which also includes libwebsocket sockets
-		 */
-
-		n = poll(pollfds, count_pollfds, 50);
-		if (n < 0)
-			continue;
-
-		if (n)
-			for (n = 0; n < count_pollfds; n++)
-				if (pollfds[n].revents)
-					/*
-					* returns immediately if the fd does not
-					* match anything under libwebsockets
-					* control
-					*/
-					if (lws_service_fd(context,
-								  &pollfds[n]) < 0)
-						goto done;
-#else
-		/*
-		 * If libwebsockets sockets are all we care about,
-		 * you can use this api which takes care of the poll()
-		 * and looping through finding who needed service.
-		 *
-		 * If no socket needs service, it'll return anyway after
-		 * the number of ms in the second argument.
-		 */
 
 		n = lws_service(context, 50);
-#endif
 	}
-
-#ifdef EXTERNAL_POLL
-done:
-#endif
 
 	lws_context_destroy(context);
 

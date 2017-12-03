@@ -20,8 +20,8 @@ build src/automation.o.ast: build_cpp_fast_ast ../src/automation.cpp
 build $sareportdir/src/automation.o.xml: build_cpp_fast_sa src/automation.o.ast || externalFnMap.txt
 build src/automation.o.txt: build_cpp_api ../src/automation.cpp 
 build $coveragedir/src/automation.o.cov: build_cov ../src/automation.cpp 
-build src/main.o: build_cpp ../src/main.cpp 
-build src/main.o.ast: build_cpp_fast_ast ../src/main.cpp 
-build $sareportdir/src/main.o.xml: build_cpp_fast_sa src/main.o.ast || externalFnMap.txt
-build src/main.o.txt: build_cpp_api ../src/main.cpp 
-build $coveragedir/src/main.o.cov: build_cov ../src/main.cpp 
+build src/m.o: build_cpp ../src/m.cpp 
+build src/m.o.ast: build_cpp_fast_ast ../src/m.cpp 
+build $sareportdir/src/m.o.xml: build_cpp_fast_sa src/m.o.ast || externalFnMap.txt
+build src/m.o.txt: build_cpp_api ../src/m.cpp 
+build $coveragedir/src/m.o.cov: build_cov ../src/m.cpp 

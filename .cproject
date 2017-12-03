@@ -259,6 +259,9 @@
 								<option id="gnu.cpp.link.option.paths.1801440232" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/lib}&quot;"/>
 								</option>
+								<option id="gnu.cpp.link.option.libs.1969714745" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="websockets"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.756803871" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
