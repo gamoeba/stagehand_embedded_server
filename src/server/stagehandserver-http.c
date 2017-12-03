@@ -34,7 +34,13 @@
  *				using this protocol, including the sender
  */
 
+#if defined(LWS_OPENSSL_SUPPORT) && defined(LWS_HAVE_SSL_CTX_set1_param)
+/* location of the certificate revocation list */
+extern char crl_path[1024];
+#endif
+
 extern int debug_level;
+extern struct lws_plat_file_ops fops_mem;
 
 enum demo_protocols {
 	/* always first */
@@ -121,6 +127,7 @@ const char * get_mimetype(const char *file)
 	return NULL;
 }
 
+
 static const char * const param_names[] = {
 	"text",
 	"send",
@@ -135,6 +142,46 @@ enum enum_param_names {
 	EPN_UPLOAD,
 };
 
+static int
+file_upload_cb(void *data, const char *name, const char *filename,
+	       char *buf, int len, enum lws_spa_fileupload_states state)
+{
+	struct per_session_data__http *pss =
+			(struct per_session_data__http *)data;
+	int n;
+
+	(void)n;
+
+	switch (state) {
+	case LWS_UFS_OPEN:
+		strncpy(pss->filename, filename, sizeof(pss->filename) - 1);
+		/* we get the original filename in @filename arg, but for
+		 * simple demo use a fixed name so we don't have to deal with
+		 * attacks  */
+		pss->post_fd = (lws_filefd_type)(long long)open("/tmp/post-file",
+			       O_CREAT | O_TRUNC | O_RDWR, 0600);
+		break;
+	case LWS_UFS_FINAL_CONTENT:
+	case LWS_UFS_CONTENT:
+		if (len) {
+			pss->file_length += len;
+
+			/* if the file length is too big, drop it */
+			if (pss->file_length > 100000)
+				return 1;
+
+			n = write((int)(long long)pss->post_fd, buf, len);
+			lwsl_notice("%s: write %d says %d\n", __func__, len, n);
+		}
+		if (state == LWS_UFS_CONTENT)
+			break;
+		close((int)(long long)pss->post_fd);
+		pss->post_fd = LWS_INVALID_FILE;
+		break;
+	}
+
+	return 0;
+}
 
 /* this protocol server (always the first one) handles HTTP,
  *
@@ -155,12 +202,17 @@ int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
 	unsigned char *end, *start;
 	struct timeval tv;
 	unsigned char *p;
+#ifndef LWS_NO_CLIENT
+	struct per_session_data__http *pss1;
+	struct lws *wsi1;
+#endif
 	char buf[256];
 	char b64[64];
 	int n, m;
 #ifdef EXTERNAL_POLL
 	struct lws_pollargs *pa = (struct lws_pollargs *)in;
 #endif
+
 
 	switch (reason) {
 	case LWS_CALLBACK_HTTP:
@@ -187,25 +239,79 @@ int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
 			goto try_to_reuse;
 		}
 
+#if !defined(LWS_NO_CLIENT) && defined(LWS_OPENSSL_SUPPORT)
+		if (!strncmp(in, "/proxytest", 10)) {
+			struct lws_client_connect_info i;
+			char *rootpath = "/git/";
+			const char *p = (const char *)in;
+
+			if (lws_get_child(wsi))
+				break;
+
+			pss->client_finished = 0;
+			memset(&i, 0, sizeof(i));
+			i.context = lws_get_context(wsi);
+			i.address = "libwebsockets.org";
+			i.port = 443;
+			i.ssl_connection = 1;
+			if (p[10])
+				i.path = (char *)in + 10;
+			else
+				i.path = rootpath;
+			i.host = i.address;
+			i.origin = NULL;
+			i.method = "GET";
+			i.parent_wsi = wsi;
+			i.uri_replace_from = "libwebsockets.org/git/";
+			i.uri_replace_to = "/proxytest/";
+
+			if (!lws_client_connect_via_info(&i)) {
+				lwsl_err("proxy connect fail\n");
+				break;
+			}
+
+			break;
+		}
+#endif
+
+#if 0 
+		/* this example server has no concept of directories */
+		if (strchr((const char *)in + 1, '/')) {
+			lws_return_http_status(wsi, HTTP_STATUS_NOT_ACCEPTABLE, NULL);
+			goto try_to_reuse;
+		}
+#endif
+
 		/* if a legal POST URL, let it continue and accept data */
-		if (lws_hdr_total_length(wsi, WSI_TOKEN_POST_URI))
+		if (lws_hdr_total_length(wsi, WSI_TOKEN_POST_URI)) {
+			n = lws_hdr_copy(wsi, buf, sizeof(buf), WSI_TOKEN_POST_URI);
+			if (n < 0)
+				return -1;
+			if (strcmp(buf, "/formtest")) {
+				lws_return_http_status(wsi, HTTP_STATUS_NOT_ACCEPTABLE, NULL);
+				return -1;
+			}
 			return 0;
+		}
 
 		/* check for the "send a big file by hand" example case */
 
-		if (0 && !strcmp((const char *)in, "/leaf.jpg")) {
+		if (!strcmp((const char *)in, "/leaf.zip")) {
+			lws_fop_flags_t flags = LWS_O_RDONLY;
+
 			if (strlen(resource_path) > sizeof(leaf_path) - 10)
 				return -1;
-			sprintf(leaf_path, "%s/leaf.jpg", resource_path);
+			sprintf(leaf_path, "%s/leaf.zip", resource_path);
 
 			/* well, let's demonstrate how to send the hard way */
 
 			p = buffer + LWS_PRE;
 			end = p + sizeof(buffer) - LWS_PRE;
 
-			pss->fop_fd = lws_vfs_file_open(wsi, leaf_path, &file_len);
-
-			if (pss->fop_fd == LWS_INVALID_FILE) {
+			pss->fop_fd = lws_vfs_file_open(
+					&fops_mem,
+					leaf_path, &flags);
+			if (!pss->fop_fd) {
 				lwsl_err("failed to open file %s\n", leaf_path);
 				return -1;
 			}
@@ -268,7 +374,12 @@ int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
 		}
 
 		/* if not, send a file the easy way */
-		strcpy(buf, resource_path);
+		if (!strncmp(in, "/cgit-data/", 11)) {
+			in = (char *)in + 11;
+			strcpy(buf, "/usr/share/cgit");
+		} else
+			strcpy(buf, resource_path);
+
 		if (strcmp(in, "/")) {
 			if (*((const char *)in) != '/')
 				strcat(buf, "/");
@@ -305,6 +416,7 @@ int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
 				(unsigned char *)leaf_path + sizeof(leaf_path)))
 				return 1;
 		}
+#if !defined(LWS_WITH_HTTP2)
 		if (lws_is_ssl(wsi) && lws_add_http_header_by_name(wsi,
 						(unsigned char *)
 						"Strict-Transport-Security:",
@@ -314,7 +426,8 @@ int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
 						(unsigned char *)leaf_path +
 							sizeof(leaf_path)))
 			return 1;
-		n = (char *)p - leaf_path;
+#endif
+		n = lws_ptr_diff(p, leaf_path);
 
 		n = lws_serve_http_file(wsi, buf, mimetype, other_headers, n);
 		if (n < 0)
@@ -328,28 +441,28 @@ int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
 		 */
 		break;
 
-    case LWS_CALLBACK_CLIENT_RECEIVE:
+        case LWS_CALLBACK_CLIENT_RECEIVE:
                 ((char *)in)[len] = '\0';
                 lwsl_info("rx %d '%s'\n", (int)len, (char *)in);
                 break;
 
-//	case LWS_CALLBACK_HTTP_BODY:
-//		/* create the POST argument parser if not already existing */
-//		if (!pss->spa) {
-//			pss->spa = lws_spa_create(wsi, param_names,
-//					ARRAY_SIZE(param_names), 1024,
-//					file_upload_cb, pss);
-//			if (!pss->spa)
-//				return -1;
-//
-//			pss->filename[0] = '\0';
-//			pss->file_length = 0;
-//		}
-//
-//		/* let it parse the POST data */
-//		if (lws_spa_process(pss->spa, in, (int)len))
-//			return -1;
-//		break;
+	case LWS_CALLBACK_HTTP_BODY:
+		/* create the POST argument parser if not already existing */
+		if (!pss->spa) {
+			pss->spa = lws_spa_create(wsi, param_names,
+					ARRAY_SIZE(param_names), 1024,
+					file_upload_cb, pss);
+			if (!pss->spa)
+				return -1;
+
+			pss->filename[0] = '\0';
+			pss->file_length = 0;
+		}
+
+		/* let it parse the POST data */
+		if (lws_spa_process(pss->spa, in, (int)len))
+			return -1;
+		break;
 
 	case LWS_CALLBACK_HTTP_BODY_COMPLETION:
 		lwsl_debug("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
@@ -426,6 +539,35 @@ int callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
 		if (!lws_get_child(wsi) && !pss->fop_fd)
 			goto try_to_reuse;
 
+#ifndef LWS_NO_CLIENT
+		if (pss->reason_bf & LWS_CB_REASON_AUX_BF__PROXY) {
+			char *px = buf + LWS_PRE;
+			int lenx = sizeof(buf) - LWS_PRE;
+			/*
+			 * our sink is writeable and our source has something
+			 * to read.  So read a lump of source material of
+			 * suitable size to send or what's available, whichever
+			 * is the smaller.
+			 */
+
+
+			pss->reason_bf &= ~LWS_CB_REASON_AUX_BF__PROXY;
+			wsi1 = lws_get_child(wsi);
+			if (!wsi1)
+				break;
+			if (lws_http_client_read(wsi1, &px, &lenx) < 0)
+				return -1;
+
+			if (pss->client_finished)
+				return -1;
+
+			break;
+		}
+
+		if (lws_get_child(wsi))
+			break;
+
+#endif
 		/*
 		 * we can send more of whatever it is we were sending
 		 */
@@ -496,9 +638,78 @@ bail:
 	 * connection continue.
 	 */
 	case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
-
 		/* if we returned non-zero from here, we kill the connection */
 		break;
+
+#ifndef LWS_NO_CLIENT
+	case LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP: {
+		char ctype[64], ctlen = 0;
+		lwsl_err("LWS_CALLBACK_ESTABLISHED_CLIENT_HTTP\n");
+		p = buffer + LWS_PRE;
+		end = p + sizeof(buffer) - LWS_PRE;
+		if (lws_add_http_header_status(lws_get_parent(wsi), HTTP_STATUS_OK, &p, end))
+			return 1;
+		if (lws_add_http_header_by_token(lws_get_parent(wsi),
+				WSI_TOKEN_HTTP_SERVER,
+			    	(unsigned char *)"libwebsockets",
+				13, &p, end))
+			return 1;
+
+		ctlen = lws_hdr_copy(wsi, ctype, sizeof(ctype), WSI_TOKEN_HTTP_CONTENT_TYPE);
+		if (ctlen > 0) {
+			if (lws_add_http_header_by_token(lws_get_parent(wsi),
+				WSI_TOKEN_HTTP_CONTENT_TYPE,
+				(unsigned char *)ctype, ctlen, &p, end))
+				return 1;
+		}
+#if 0
+		if (lws_add_http_header_content_length(lws_get_parent(wsi),
+						       file_len, &p, end))
+			return 1;
+#endif
+		if (lws_finalize_http_header(lws_get_parent(wsi), &p, end))
+			return 1;
+
+		*p = '\0';
+		lwsl_info("%s\n", buffer + LWS_PRE);
+
+		n = lws_write(lws_get_parent(wsi), buffer + LWS_PRE,
+			      p - (buffer + LWS_PRE),
+			      LWS_WRITE_HTTP_HEADERS);
+		if (n < 0)
+			return -1;
+
+		break; }
+	case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
+		//lwsl_err("LWS_CALLBACK_CLOSED_CLIENT_HTTP\n");
+		return -1;
+		break;
+	case LWS_CALLBACK_RECEIVE_CLIENT_HTTP:
+		//lwsl_err("LWS_CALLBACK_RECEIVE_CLIENT_HTTP: wsi %p\n", wsi);
+		assert(lws_get_parent(wsi));
+		if (!lws_get_parent(wsi))
+			break;
+		pss1 = lws_wsi_user(lws_get_parent(wsi));
+		pss1->reason_bf |= LWS_CB_REASON_AUX_BF__PROXY;
+		lws_callback_on_writable(lws_get_parent(wsi));
+		break;
+	case LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ:
+		//lwsl_err("LWS_CALLBACK_RECEIVE_CLIENT_HTTP_READ len %d\n", (int)len);
+		assert(lws_get_parent(wsi));
+		m = lws_write(lws_get_parent(wsi), (unsigned char *)in,
+				len, LWS_WRITE_HTTP);
+		if (m < 0)
+			return -1;
+		break;
+	case LWS_CALLBACK_COMPLETED_CLIENT_HTTP:
+		//lwsl_err("LWS_CALLBACK_COMPLETED_CLIENT_HTTP\n");
+		assert(lws_get_parent(wsi));
+		if (!lws_get_parent(wsi))
+			break;
+		pss1 = lws_wsi_user(lws_get_parent(wsi));
+		pss1->client_finished = 1;
+		break;
+#endif
 
 	/*
 	 * callbacks for managing the external poll() array appear in
@@ -562,6 +773,39 @@ bail:
 		/* return pthread_getthreadid_np(); */
 
 		break;
+
+#if defined(LWS_OPENSSL_SUPPORT) && !defined(LWS_WITH_MBEDTLS)
+	case LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION:
+		/* Verify the client certificate */
+		if (!len || (SSL_get_verify_result((SSL*)in) != X509_V_OK)) {
+			int err = X509_STORE_CTX_get_error((X509_STORE_CTX*)user);
+			int depth = X509_STORE_CTX_get_error_depth((X509_STORE_CTX*)user);
+			const char* msg = X509_verify_cert_error_string(err);
+			lwsl_err("LWS_CALLBACK_OPENSSL_PERFORM_CLIENT_CERT_VERIFICATION: SSL error: %s (%d), depth: %d\n", msg, err, depth);
+			return 1;
+		}
+		break;
+#if defined(LWS_HAVE_SSL_CTX_set1_param) && !defined(LWS_WITH_MBEDTLS)
+	case LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS:
+		if (crl_path[0]) {
+			/* Enable CRL checking */
+			X509_VERIFY_PARAM *param = X509_VERIFY_PARAM_new();
+			X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
+			SSL_CTX_set1_param((SSL_CTX*)user, param);
+			X509_STORE *store = SSL_CTX_get_cert_store((SSL_CTX*)user);
+			X509_LOOKUP *lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file());
+			n = X509_load_cert_crl_file(lookup, crl_path, X509_FILETYPE_PEM);
+			X509_VERIFY_PARAM_free(param);
+			if (n != 1) {
+				char errbuf[256];
+				n = ERR_get_error();
+				lwsl_err("LWS_CALLBACK_OPENSSL_LOAD_EXTRA_SERVER_VERIFY_CERTS: SSL error: %s (%d)\n", ERR_error_string(n, errbuf), n);
+				return 1;
+			}
+		}
+		break;
+#endif
+#endif
 
 	default:
 		break;

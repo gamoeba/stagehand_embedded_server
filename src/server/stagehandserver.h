@@ -57,6 +57,9 @@ extern int count_pollfds;
 extern volatile int force_exit;
 extern struct lws_context *context;
 extern char *resource_path;
+#if defined(LWS_OPENSSL_SUPPORT) && defined(LWS_HAVE_SSL_CTX_set1_param)
+extern char crl_path[1024];
+#endif
 
 extern void test_server_lock(int care);
 extern void test_server_unlock(int care);
@@ -93,32 +96,23 @@ struct per_session_data__http {
  * connection.
  */
 
+#if !defined(DI_HANDLED_BY_PLUGIN)
 struct per_session_data__dumb_increment {
 	int number;
 };
+#endif
 
-struct per_session_data__lws_mirror {
-	struct lws *wsi;
-	int ringbuffer_tail;
-};
-
-struct per_session_data__echogen {
-	size_t total;
-	size_t total_rx;
-	int fd;
-	int fragsize;
-	int wr;
-};
 
 extern int
 callback_http(struct lws *wsi, enum lws_callback_reasons reason, void *user,
 	      void *in, size_t len);
 
+#if !defined(DI_HANDLED_BY_PLUGIN)
 extern int
-callback_stagehand(struct lws *wsi, enum lws_callback_reasons reason,
+callback_dumb_increment(struct lws *wsi, enum lws_callback_reasons reason,
 			void *user, void *in, size_t len);
+#endif
+
 
 extern void
 dump_handshake_info(struct lws *wsi);
-
-void lwsl_emit_dlog(int level, char* line);
