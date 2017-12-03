@@ -1,0 +1,58 @@
+
+# Project Name
+APPNAME = stagehand
+
+# Project Type
+type = sharedLib
+
+# Project Profile
+profile = wearable-3.0
+
+# C/CPP Sources
+USER_SRCS = src/libwebsockets/lws-plat-unix.c src/libwebsockets/output.c src/libwebsockets/client.c src/server/stagehandserver-sh.c src/libwebsockets/client-parser.c src/libwebsockets/extension-permessage-deflate.c src/stagehand.c src/libwebsockets/alloc.c src/libwebsockets/client-handshake.c src/libwebsockets/daemonize.c src/libwebsockets/parsers.c src/libwebsockets/libwebsockets.c src/libwebsockets/context.c src/libwebsockets/getifaddrs.c src/libwebsockets/header.c src/server/stagehandserver.c src/libwebsockets/service.c src/libwebsockets/extension.c src/libwebsockets/base64-decode.c src/libwebsockets/handshake.c src/libwebsockets/server.c src/libwebsockets/sha-1.c src/libwebsockets/server-handshake.c src/server/stagehandserver-http.c src/libwebsockets/pollfd.c src/main.cpp src/automation.cpp 
+
+# EDC Sources
+USER_EDCS =  
+
+# PO Sources
+USER_POS = 
+
+# User Defines
+USER_DEFS = TIZEN_DEPRECATION DEPRECATION_WARNING 
+USER_CPP_DEFS = TIZEN_DEPRECATION DEPRECATION_WARNING 
+
+# User Undefines
+USER_UNDEFS = 
+USER_CPP_UNDEFS = 
+
+# User Libraries
+USER_LIBS = 
+
+# User Objects
+USER_OBJS = lib/stagehandzip.o
+
+# User Includes
+## C Compiler
+USER_C_INC_DIRS = inc 
+USER_INC_FILES = 
+## C++ Compiler
+USER_CPP_INC_DIRS = inc 
+USER_CPP_INC_FILES = 
+
+USER_INC_DIRS = $(USER_C_INC_DIRS) $(USER_CPP_INC_DIRS)
+
+# User Library Path
+USER_LIB_DIRS = lib 
+
+# EDC Resource Path
+USER_EDCS_IMAGE_DIRS = ${OUTPUT_DIR} 
+USER_EDCS_SOUND_DIRS = ${OUTPUT_DIR} 
+USER_EDCS_FONT_DIRS = ${OUTPUT_DIR} 
+
+# EDC Flags
+USER_EXT_EDC_KEYS = 
+
+# Resource Filter
+USER_RES_INCLUDE = 
+USER_RES_EXCLUDE = 
+

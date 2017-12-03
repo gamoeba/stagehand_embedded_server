@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../inc/stagehand.h
+stdbool.h
+-
+
+/Users/kevin/src/tizen/stagehand/src/main.cpp
+dlfcn.h
+-
+stdio.h
+-
+unistd.h
+-
+netinet/in.h
+-
+sys/socket.h
+-
+stagehand.h
+/Users/kevin/src/tizen/stagehand/src/stagehand.h
+app_common.h
+-
+unzip.h
+-
+

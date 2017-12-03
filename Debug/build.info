@@ -1,0 +1,9 @@
+#Build information
+#Thu Nov 30 09:13:45 GMT 2017
+project-path=/Users/kevin/src/tizen/stagehand
+toolchain=LLVM-3.7
+architecture=armel
+config=Debug
+type=sharedLib
+profile=Wearable
+profile-version=3.0
