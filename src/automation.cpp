@@ -25,6 +25,7 @@
 #include <iomanip>
 #include <stdio.h>
 #include <dali/public-api/dali-core.h>
+#include <dlog.h>
 //#include <dali/integration-api/debug.h>
 
 
@@ -221,14 +222,58 @@ std::string ToString( T i )
 // currently rotations are output in Euler format ( may change)
 void AppendPropertyNameAndValue( Dali::Handle handle, int propertyIndex, std::ostringstream& outputStream)
 {
+  //dlog_print(DLOG_INFO, "Stagehand", "propIndex: %d", propertyIndex);
+
   // get the property name and the value as a string
   std::string propertyName( handle.GetPropertyName( propertyIndex ) );
-  Dali::Property::Value value = handle.GetProperty( propertyIndex );
+  //dlog_print(DLOG_INFO, "Stagehand", "prop: %s", propertyName.c_str());
 
-  // Apply quotes around the property name and the value.. "color", "1.3, 3.4, 2.6"
+  // Apply quotes around the property name
   outputStream << "\"" << propertyName << "\"" << ",";
-  outputStream << "\"" << value << "\"";
+  //dlog_print(DLOG_INFO, "Stagehand", "prop1: %s", propertyName.c_str());
 
+  // Convert value to a string
+  std::ostringstream valueStream;
+  Dali::Property::Value value = handle.GetProperty( propertyIndex );
+  //dlog_print(DLOG_INFO, "Stagehand", "prop2: %d", value.GetType());
+
+  valueStream << value;
+  //dlog_print(DLOG_INFO, "Stagehand", "prop3");
+
+  std::string valueString = valueStream.str();
+  //dlog_print(DLOG_INFO, "Stagehand", "prop4");
+
+  if( value.GetType() == Dali::Property::STRING )
+  {
+	 // dlog_print(DLOG_INFO, "Stagehand", "prop5");
+
+    // Escape the string (to ensure valid json)
+    // Write out quotes, escapes and control characters using unicode syntax \uXXXX
+    std::ostringstream escapedValue;
+    for( std::string::iterator c = valueString.begin() ; c != valueString.end(); ++c )
+    {
+      if( *c == '"' )
+      {
+        escapedValue << "\\\"";
+      }
+      else if( *c == '\\' )
+      {
+        escapedValue << "\\\\";
+      }
+      else if( '\x00' <= *c && *c <= '\x1f' )
+      {
+        escapedValue << "\\u" << std::hex << std::setw(4) << std::setfill('0') << int(*c);
+      }
+      else
+      {
+        escapedValue << *c;
+      }
+    }
+
+    valueString = escapedValue.str();
+  }
+
+  outputStream << "\"" << valueString << "\"";
 }
 
 bool ExcludeProperty( int propIndex )
@@ -246,6 +291,7 @@ bool ExcludeProperty( int propIndex )
 
 std::string DumpJson( Dali::Actor actor, int level )
 {
+//	dlog_print(DLOG_INFO, "Stagehand", "dumpjson level %d %s", level, actor.GetName().c_str());
   // All the information about this actor
   std::ostringstream msg;
   msg << "{ " << Quote( "Name" ) << " : " << Quote( actor.GetName() ) << ", " << Quote( "level" ) << " : " << level << ", " << Quote( "id" ) << " : " << actor.GetId() << ", " << Quote( "IsVisible" )
@@ -256,12 +302,17 @@ std::string DumpJson( Dali::Actor actor, int level )
   Dali::Property::IndexContainer indices;
   actor.GetPropertyIndices( indices );
 
+	//dlog_print(DLOG_INFO, "Stagehand", "startprops");
+
   Dali::Property::IndexContainer::Iterator iter = indices.Begin();
   int numCustom = 0;
   for( ; iter != indices.End() ; iter++ )
   {
+
     int i = *iter;
-    if( !ExcludeProperty( i ) )
+    //dlog_print(DLOG_INFO, "Stagehand", "next prop: %d",i);
+
+    if( !ExcludeProperty( i ) && i != 10001004)
     {
       if( numCustom++ != 0 )
       {
@@ -270,12 +321,16 @@ std::string DumpJson( Dali::Actor actor, int level )
       msg << "[";
 
       AppendPropertyNameAndValue( actor, i,msg );
-
       msg << "]";
+      //dlog_print(DLOG_INFO, "Stagehand", "msg: %s", msg.str().c_str());
+
     }
   }
+	//dlog_print(DLOG_INFO, "Stagehand", "endprops");
+
   msg << "]";
   msg << ", " << Quote( "children" ) << " : [ ";
+	//dlog_print(DLOG_INFO, "Stagehand", "dump children count: %d", actor.GetChildCount());
 
   // Recursively dump all the children as well
   for( unsigned int i = 0 ; i < actor.GetChildCount() ; ++i )
@@ -284,6 +339,7 @@ std::string DumpJson( Dali::Actor actor, int level )
     {
       msg << " , ";
     }
+    //dlog_print(DLOG_INFO, "Stagehand", "dumpchild %d", i);
     msg << DumpJson( actor.GetChildAt( i ), level + 1 );
   }
   msg << "] }";
@@ -295,6 +351,7 @@ std::string GetActorTree()
 {
   Dali::Actor actor = Dali::Stage::GetCurrent().GetRootLayer();
   std::string str = DumpJson( actor, 0 );
+//  dlog_print(DLOG_INFO, "Stagehand", "GetActorTree %s", str.c_str());
   return str;
 }
 namespace Stagehand

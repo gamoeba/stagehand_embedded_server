@@ -34,6 +34,10 @@
 #include <unzip.h>
 #include "libwebsockets.h"
 
+#include <dali/integration-api/adaptors/trigger-event-factory.h>
+#include <dali/integration-api/adaptors/trigger-event-factory-interface.h>
+#include "automation.h"
+
 extern "C" int server_main(const char*path, int port);
 
 using namespace Dali;
@@ -45,7 +49,7 @@ pthread_cond_t cv;
 pthread_mutex_t mp;
 
 void event_thread_callback() {
-	std::string json = "";//Stagehand::Automation::DumpScene();
+	std::string json = Stagehand::Automation::DumpScene();
 	const char* ptr = json.c_str();
 	int len = json.length();
 	int written = 0;
@@ -64,16 +68,15 @@ void* connection_handler(void* info)
 	char buffer[256];
 	current_connection_fd = *(int*)info;
 
-
 	nbytes = read(current_connection_fd, buffer, 256);
 	buffer[nbytes] = 0;
 
-	//TriggerEventFactory factory;
+	TriggerEventFactory factory;
     // create a trigger event that automatically deletes itself after the callback has run in the main thread
-    //TriggerEventInterface *interface = factory.CreateTriggerEvent( MakeCallback(event_thread_callback), TriggerEventInterface::DELETE_AFTER_TRIGGER );
+    TriggerEventInterface *interface = factory.CreateTriggerEvent( MakeCallback(event_thread_callback), TriggerEventInterface::DELETE_AFTER_TRIGGER );
 
     // asynchronous call, the call back will be run sometime later on the main thread
- //   interface->Trigger();
+    interface->Trigger();
 
 	return NULL;
 }
@@ -102,13 +105,15 @@ void* listeningSocket(void*)
 		(struct sockaddr *) &address,
 		sizeof(struct sockaddr_un)) != 0)
 	{
-		printf("bind() failed\n");
+		dlog_print(DLOG_INFO, "Stagehand", "bind() failed\n");
 		return NULL;
 	}
 
 	if(listen(socket_fd, 5) != 0)
 	{
-		printf("listen() failed\n");
+		dlog_print(DLOG_INFO, "Stagehand", "listen failed\n");
+
+		printf("listen() failed");
 		return NULL;
 	}
 
@@ -116,6 +121,8 @@ void* listeningSocket(void*)
 		(struct sockaddr *) &address,
 		&address_length)) > -1)
 	{
+		dlog_print(DLOG_INFO, "Stagehand", "accept connection");
+
 		pthread_t* clientThread = new pthread_t();
 		void* info = &connection_fd;
 		int error = pthread_create( clientThread, NULL, connection_handler, info );
@@ -140,6 +147,7 @@ void startListeningSocketThread() {
 void startServer()
 {
 //	printf ("Starting Stagehand server\n");
+	startListeningSocketThread();
 	dlog_print(DLOG_INFO, "Stagehand", "start server");
 	const char* path = "/";
 	dlog_print(DLOG_INFO, "Stagehand", "shared path: %s", path);

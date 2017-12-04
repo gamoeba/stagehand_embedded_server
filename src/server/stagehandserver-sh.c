@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <linux/un.h>
+#include <dlog.h>
 
 #define BUF_SIZE 4096
 #define RESP_SIZE 1024*1024
@@ -39,7 +40,7 @@ char* issueCmd(const char* cmd)
  socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
  if(socket_fd < 0)
  {
-  printf("socket() failed\n");
+  dlog_print(DLOG_INFO, "Stagehand", "socket() failed\n");
   return "";
  }
 
@@ -54,13 +55,17 @@ char* issueCmd(const char* cmd)
             (struct sockaddr *) &address, 
             sizeof(address)) != 0)
  {
+	 dlog_print(DLOG_INFO, "Stagehand", "connect failed\n");
+
   printf("connect() failed\n");
   return "";
  }
 
- int err = write(socket_fd, cmd, strlen(cmd));
+ ssize_t written = write(socket_fd, cmd, strlen(cmd));
 
- if (err!=0) {
+ if (written==-1) {
+	  dlog_print(DLOG_INFO, "Stagehand", " write to socket() failed");
+
  	perror("write to socket failed");
  } 
  int eol = 0;
@@ -72,6 +77,8 @@ char* issueCmd(const char* cmd)
  	if (nbytes>0 && buffer[nbytes-1]=='\n') {
  		eol = 1;
  	}
+ 	if (nbytes ==0)
+ 		eol = 1;
  }
  responseBuf[index] ='\0';
 
@@ -111,6 +118,7 @@ callback_stagehand(struct lws *wsi, enum lws_callback_reasons reason,
 	// 	break;
 
 	case LWS_CALLBACK_RECEIVE:
+		dlog_print(DLOG_INFO, "Stagehand", "received stagehand message: %s", (const char*)in);
 		printf("received message %s\n",(const char *) in);
 		if (strcmp((const char *)in, "dump_scene\n") == 0){
 			pss->number = 0;
