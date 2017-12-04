@@ -1,0 +1,47 @@
+body {
+    background: linear-gradient(90deg, #422, #644);
+}
+
+#actortree {
+    color: white;
+}
+
+#container {
+    background-color: #341A1A;
+    color: #ffccee;
+}
+
+#proptable {
+    color: white;
+}
+
+.lightrow {
+    background-color: #705050;
+}
+.darkrow {
+    background-color: #503030;
+}
+
+.gridAltDarkColor {
+    background-color: #452525; 
+}
+
+.gridAltLightColor {
+    background-color: #654545; 
+}
+
+.toolbarButton {
+    background-color: #341A1A; 
+}
+
+#leftsection .vsplitter {
+  background-color: #441C1C;
+}
+
+#widget .vsplitter {
+  background-color: #441C1C;
+}
+
+#toolbar {
+    background-color: #341A1A;
+}

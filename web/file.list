@@ -1,0 +1,15 @@
+stagehand_web_files =\
+   $(stagehand_web_dir)/*.html
+stagehand_web_js_files =\
+   $(stagehand_web_dir)/js/*.js
+stagehand_web_js_lib_files =\
+   $(stagehand_web_dir)/js/lib/*.js
+stagehand_web_js_modifiers_files =\
+   $(stagehand_web_dir)/js/modifiers/*.js
+stagehand_web_js_fonts_files =\
+   $(stagehand_web_dir)/js/fonts/*.js
+stagehand_web_css_files =\
+   $(stagehand_web_dir)/css/*.css
+stagehand_web_image_files =\
+   $(stagehand_web_dir)/images/*.png \
+   $(stagehand_web_dir)/images/*.gif

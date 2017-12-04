@@ -1,0 +1,164 @@
+<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>Stagehand</title>
+    <meta name="Description" content="Dali Visual Debugger"/>
+    <link rel="shortcut icon" href=""/>
+    <link id="themecss" rel="stylesheet" type="text/css" href="css/dark.css">
+    <link href="css/jquery.splitter.css" rel="stylesheet"/>
+    <link href="css/stagehand.css" rel="stylesheet"/>
+    <link href="css/tree.css" rel="stylesheet"/>
+
+    <script src="js/lib/startswith.js"></script>
+    <script src="js/lib/three.min.js"></script>
+    <script src="js/lib/jquery.min.js"></script>
+    <script src="js/lib/jquery.splitter-0.14.0.js"></script>
+    <script src="js/lib/jstree.min.js"></script>
+    <script src="js/lib/colResizable-1.5.min.js"></script>
+    <script src="js/stagehandutils.js"></script>
+    <script src="js/stagehandparser.js"></script>
+    <script src="js/stagehandrenderer.js"></script>
+    <script src="js/stagehandmain.js"></script>
+    <script src="js/stagehandintro.js"></script>
+
+
+    <script src="js/modifiers/ExplodeModifier.js"></script>
+    <script src="js/modifiers/TessellateModifier.js"></script>
+
+    <script type="text/javascript" src="js/lib/jquery.nicescroll.min.js"></script>
+
+    <tag autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+
+    <script type="x-shader/x-vertex" id="introvertexshader">
+
+        uniform float amplitude;
+
+        attribute vec3 customColor;
+        attribute vec3 displacement;
+
+        varying vec3 vNormal;
+        varying vec3 vColor;
+
+        void main() {
+
+            vNormal = normal;
+            vColor = customColor;
+
+            vec3 newPosition = position + normal * amplitude * displacement;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4( newPosition, 1.0 );
+
+        }
+
+    </script>
+
+    <script type="x-shader/x-fragment" id="introfragmentshader">
+        varying vec3 vNormal;
+        varying vec3 vColor;
+        uniform float opacity;
+        uniform vec3 shadeColor; 
+
+        void main() {
+
+            const float ambient = 0.4;
+
+            vec3 light = vec3( 1.0 );
+            light = normalize( light );
+
+            float directional = max( dot( vNormal, light ), 0.0 );
+
+            gl_FragColor = vec4( ( directional + ambient ) * vColor * shadeColor, opacity);
+        }
+
+        </script>
+
+    <script>
+    jQuery(function($) {
+       $('#widget').width(window.innerWidth-50).height(window.innerHeight).split({orientation:'vertical', position:'75%', limit:100});
+       $('#leftsection').width('100%').height(window.innerHeight).split({orientation:'vertical', position:'25%', limit:10});
+       $('#toolbar').width(40).height(window.innerHeight)
+    });
+    </script>
+
+    <script id="vertexShader" type="x-shader/x-vertex">
+
+            precision mediump float;
+            precision mediump int;
+
+            uniform mat4 modelViewMatrix; // optional
+            uniform mat4 projectionMatrix; // optional
+
+            attribute vec3 position;
+            attribute vec4 color;
+            attribute vec2 uv;
+
+            varying vec2 vUV;
+
+            void main()	{
+                    vUV = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+
+    </script>
+
+    <script id="fragmentShader" type="x-shader/x-fragment">
+
+            precision mediump float;
+            precision mediump int;
+
+            uniform float alpha;
+            uniform vec3 shadeColor; 
+
+            varying vec2 vUV;
+
+            void main()	{
+                    float fac =  0.5 * ((1.0 - vUV.x) * vUV.y) + 0.5;
+
+                    vec4 color = vec4( shadeColor.x * fac, shadeColor.y * fac , shadeColor.z * fac, alpha );
+                    gl_FragColor = color;
+
+            }
+
+    </script>
+
+</head>
+<body style="overflow:hidden;">
+<div>
+<div id="toolbar">
+<<<<<<< HEAD
+  <button class="toolbarButton" type="button" title="Update Scene" onclick="stagehand.main.update()"><img src="images/Refresh.png"/> </button>
+=======
+  <button class="toolbarButton" type="button" title="Update Scene" onclick="stagehand.main.updateDemo()"><img src="images/Refresh.png"/> </button>
+>>>>>>> demo
+  <button class="toolbarButton" type="button" title="Zoom In" onclick="stagehand.renderer.zoomIn()"><img src="images/ZoomIn.png"/> </button>
+  <button class="toolbarButton" type="button" title="Zoom Out" onclick="stagehand.renderer.zoomOut()"><img src="images/ZoomOut.png"/> </button>
+  <button class="toolbarButton" type="button" title="Settings" onclick="window.location.href='#settings'"><img src="images/settings.png"/> </button>
+</div>
+<div id="widget">
+    <div id="foo">
+        <div id="leftsection">
+            <div id="actortree"></div>
+            <div id="container">
+                <div id="scenegraph"></div>
+                <div id="intro"> </div>
+            </div>
+        </div><!-- #left -->
+    </div> <!-- end of #foo -->
+    <div id="proptable"> </div>
+</div> <!-- end of #widget -->
+</div>
+
+<div id="settings" class="modalDialog">
+    <div>
+        <a href="#close" title="Close" class="close">X</a>
+        <h2>Settings</h2>
+        <p>Themes</p>
+        <p><button onclick="stagehand.main.swapStyleSheet('css/dark.css')">Dark</button></p>
+        <p><button onclick="stagehand.main.swapStyleSheet('css/ocean.css')">Ocean</button></p>
+        <p><button onclick="stagehand.main.swapStyleSheet('css/forest.css')">Forest</button></p>
+        <p><button onclick="stagehand.main.swapStyleSheet('css/burgundy.css')">Burgundy</button></p>
+    </div>
+</div>
+
+</body>
+</html>
