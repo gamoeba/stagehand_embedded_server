@@ -3,6 +3,7 @@
 	<name>stagehand</name>
 	<comment></comment>
 	<projects>
+		<project>libwebsockets</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

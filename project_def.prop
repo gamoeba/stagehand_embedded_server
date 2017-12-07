@@ -42,7 +42,7 @@ USER_CPP_INC_FILES =
 USER_INC_DIRS = $(USER_C_INC_DIRS) $(USER_CPP_INC_DIRS)
 
 # User Library Path
-USER_LIB_DIRS = lib 
+USER_LIB_DIRS = lib/arm lib/x86
 
 # EDC Resource Path
 USER_EDCS_IMAGE_DIRS = ${OUTPUT_DIR} 

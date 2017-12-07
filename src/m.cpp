@@ -153,7 +153,6 @@ void startServer()
 	dlog_print(DLOG_INFO, "Stagehand", "shared path: %s", path);
 
 	pid_t pid = fork();
-//	char respath[256];
 
 	if (pid==0) {
 		dlog_print(DLOG_INFO, "Stagehand", "start server forked");
@@ -166,7 +165,7 @@ void startServer()
 		//execlp("stagehandserver", "stagehandserver", respath, "--port=8080", NULL);
 
 
-		int res = server_main(path, 7681);
+		int res = server_main(path, 27000);
 		dlog_print(DLOG_INFO, "Stagehand", "server finished");
 
 		exit(res);
