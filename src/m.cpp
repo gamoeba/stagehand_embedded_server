@@ -139,9 +139,22 @@ void startListeningSocketThread() {
 	pthread_t* serverThread = new pthread_t();
 	int error = pthread_create( serverThread, NULL, listeningSocket, NULL );
 	if (error!=0) {
-		perror("Could not start thread for listening to socket");
+		dlog_print(DLOG_INFO, "Stagehand", "Could not start thread for listening to socket");
 	}
 }
+
+void* callserver(void *) {
+	server_main("/",27000);
+}
+
+void startWebServerThread() {
+	pthread_t* serverThread = new pthread_t();
+	int error = pthread_create( serverThread, NULL, callserver, NULL );
+	if (error!=0) {
+		dlog_print(DLOG_INFO, "Stagehand", "Could not start thread for listening to socket");
+	}
+}
+
 
 
 void startServer()
@@ -151,8 +164,8 @@ void startServer()
 	dlog_print(DLOG_INFO, "Stagehand", "start server");
 	const char* path = "/";
 	dlog_print(DLOG_INFO, "Stagehand", "shared path: %s", path);
-
-	pid_t pid = fork();
+	startWebServerThread();
+	pid_t pid = 3;//fork();
 
 	if (pid==0) {
 		dlog_print(DLOG_INFO, "Stagehand", "start server forked");
