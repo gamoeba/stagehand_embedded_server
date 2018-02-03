@@ -27,6 +27,12 @@ int DALI_EXPORT_API main(int argc, char **argv)
   return 0;
 }
 
-Start your app and then connect your web browser to your device IP on port 27000
+Setup port forwarding then start your app and then connect your web browser to localhost port 27000
 
-eg. http://192.168.0.10:27000/
+sdb forward tcp:27000 tcp:27000
+http://localhost:27000
+
+If you can connect directly to the wifi that the device is registered on you can skip the port forwarding
+
+eg.
+http://<device-ip>:27000/
