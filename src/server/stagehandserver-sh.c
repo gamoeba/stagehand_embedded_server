@@ -104,18 +104,6 @@ callback_stagehand(struct lws *wsi, enum lws_callback_reasons reason,
 		pss->number = 0;
 		break;
 
-	// case LWS_CALLBACK_SERVER_WRITEABLE:
-	// 	n = sprintf((char *)p, "%d", pss->number++);
-	// 	m = lws_write(wsi, p, n, LWS_WRITE_TEXT);
-	// 	if (m < n) {
-	// 		lwsl_err("ERROR %d writing to di socket\n", n);
-	// 		return -1;
-	// 	}
-	// 	if (close_testing && pss->number == 50) {
-	// 		lwsl_info("close tesing limit, closing\n");
-	// 		return -1;
- // 		}
-	// 	break;
 
 	case LWS_CALLBACK_RECEIVE:
 		dlog_print(DLOG_INFO, "Stagehand", "received stagehand message: %s", (const char*)in);

@@ -144,7 +144,9 @@ void startListeningSocketThread() {
 }
 
 void* callserver(void *) {
+	// TODO pass the configuration values to the server
 	server_main("/",27000);
+	return NULL;
 }
 
 void startWebServerThread() {
@@ -159,7 +161,6 @@ void startWebServerThread() {
 
 void startServer()
 {
-//	printf ("Starting Stagehand server\n");
 	startListeningSocketThread();
 	dlog_print(DLOG_INFO, "Stagehand", "start server");
 	const char* path = "/";

@@ -1,6 +1,6 @@
 
 # Project Name
-APPNAME = stagehand
+APPNAME = stagehand_${ARCH}
 
 # Project Type
 type = sharedLib
@@ -26,7 +26,7 @@ USER_UNDEFS =
 USER_CPP_UNDEFS = 
 
 # User Libraries
-USER_LIBS = websockets 
+USER_LIBS = websockets_${ARCH} 
 
 # User Objects
 USER_OBJS = 
@@ -42,7 +42,7 @@ USER_CPP_INC_FILES =
 USER_INC_DIRS = $(USER_C_INC_DIRS) $(USER_CPP_INC_DIRS)
 
 # User Library Path
-USER_LIB_DIRS = lib/arm lib/x86
+USER_LIB_DIRS = lib
 
 # EDC Resource Path
 USER_EDCS_IMAGE_DIRS = ${OUTPUT_DIR} 

@@ -1,6 +1,6 @@
 
 # Add pre/post build process
 PREBUILD_DESC = 
-PREBUILD_COMMAND = 
+PREBUILD_COMMAND = process_zip.sh
 POSTBUILD_DESC = 
 POSTBUILD_COMMAND = 
