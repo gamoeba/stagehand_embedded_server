@@ -118,6 +118,9 @@ const char * get_mimetype(const char *file)
 
 	if (!strcmp(&file[n - 4], ".css"))
 		return "text/css";
+	if (!strcmp(&file[n - 4], ".zip"))
+			return "application/zip";
+
 	if (!strcmp(&file[n - 4], ".txt"))
 		return "text/plain";
 

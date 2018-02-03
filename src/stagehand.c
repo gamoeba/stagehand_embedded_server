@@ -4,12 +4,11 @@
 #include "stagehand.h"
 #include <dlog/dlog.h>
 
-// This is an example of an exported method.
 bool
-startstagehand1(void)
+startstagehand1(const char* stagehand_path, int port)
 {
 	//startListeningSocketThread();
 	dlog_print(DLOG_INFO, "Stagehand", "startstagehand");
-	startServer();
+	startServer(stagehand_path, port);
 	return true;
 }

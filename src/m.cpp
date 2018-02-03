@@ -143,14 +143,23 @@ void startListeningSocketThread() {
 	}
 }
 
-void* callserver(void *) {
+struct server_info {
+	const char* path;
+	int port;
+};
+
+server_info info;
+
+void* callserver(void * param) {
 	// TODO pass the configuration values to the server
-	server_main("/",27000);
+	server_main(info.path,info.port);
 	return NULL;
 }
 
-void startWebServerThread() {
+void startWebServerThread(const char* stagehand_path, int port) {
 	pthread_t* serverThread = new pthread_t();
+	info.path = stagehand_path;
+	info.port = port;
 	int error = pthread_create( serverThread, NULL, callserver, NULL );
 	if (error!=0) {
 		dlog_print(DLOG_INFO, "Stagehand", "Could not start thread for listening to socket");
@@ -159,33 +168,22 @@ void startWebServerThread() {
 
 
 
-void startServer()
+void startServer(const char* stagehand_path, int port=27000)
 {
 	startListeningSocketThread();
-	dlog_print(DLOG_INFO, "Stagehand", "start server");
-	const char* path = "/";
-	dlog_print(DLOG_INFO, "Stagehand", "shared path: %s", path);
-	startWebServerThread();
-	pid_t pid = 3;//fork();
-
-	if (pid==0) {
-		dlog_print(DLOG_INFO, "Stagehand", "start server forked");
-
-		//int res = daemon(0,0);
-		//if (res !=0 ) {
-		//	perror("Faild to detach process from parent");
-		//}
-		//sprintf(respath,"--resource_path=%s", STAGEHAND_SERVER_DIR);
-		//execlp("stagehandserver", "stagehandserver", respath, "--port=8080", NULL);
-
-
-		int res = server_main(path, 27000);
-		dlog_print(DLOG_INFO, "Stagehand", "server finished");
-
-		exit(res);
-		//printf("stagehandserver start failed\n");
-		// if it fails, just exit, nothing more to do
-	}
+	dlog_print(DLOG_INFO, "Stagehand", "starting server: shared path: %s", stagehand_path);
+	startWebServerThread(stagehand_path, port);
+//	pid_t pid = 3;//fork();
+//
+//	if (pid==0) {
+//		dlog_print(DLOG_INFO, "Stagehand", "start server forked");
+//
+//
+//		int res = server_main(stagehand_path, 27000);
+//		dlog_print(DLOG_INFO, "Stagehand", "server finished");
+//
+//		exit(res);
+//	}
 }
 
 extern "C" {

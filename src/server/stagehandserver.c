@@ -19,6 +19,7 @@
  */
 
 #include "stagehandserver.h"
+#include <dlog/dlog.h>
 
 int close_testing;
 int max_poll_elements;
@@ -36,12 +37,11 @@ struct lws_plat_file_ops fops_plat;
 
 extern struct lws_plat_file_ops fops_mem;
 
-/* http server gets files from this path */
-#define LOCAL_RESOURCE_PATH INSTALL_DATADIR"/libwebsockets-test-server"
-char *resource_path = "/";//LOCAL_RESOURCE_PATH;
-#if defined(LWS_OPENSSL_SUPPORT) && defined(LWS_HAVE_SSL_CTX_set1_param)
-char crl_path[1024] = "";
-#endif
+char *resource_path;
+int resource_path_length;
+//#if defined(LWS_OPENSSL_SUPPORT) && defined(LWS_HAVE_SSL_CTX_set1_param)
+//char crl_path[1024] = "";
+//#endif
 
 int
 callback_stagehand(struct lws *wsi, enum lws_callback_reasons reason,
@@ -138,21 +138,22 @@ static struct lws_protocols protocols[] = {
  * compressed files without decompressing the whole archive)
  */
 static lws_fop_fd_t
-test_server_fops_open(const struct lws_plat_file_ops *fops,
+stagehandzip_fops_open(const struct lws_plat_file_ops *fops,
 		     const char *vfs_path, const char *vpath,
 		     lws_fop_flags_t *flags)
 {
 	lws_fop_fd_t fop_fd;
 
-	// open zip from file in memory 
-	fop_fd = fops_zip.open(&fops_mem, vfs_path, vfs_path+1, flags);
+	// open zip file
+	dlog_print(DLOG_INFO,"Stagehand", "access file: %s , %s", vfs_path, vfs_path + resource_path_length + 1);
+	fop_fd = fops_zip.open(&fops_plat, vfs_path, vfs_path + resource_path_length + 1, flags);
 
 	if (fop_fd)
-		lwsl_info("%s: opening %s, ret %p, len %lu\n", __func__,
+		dlog_print(DLOG_INFO, "Stagehand", "%s: opening %s, ret %p, len %lu\n", __func__,
 				vfs_path, fop_fd,
 				(long)lws_vfs_get_length(fop_fd));
 	else
-		lwsl_info("%s: open %s failed\n", __func__, vfs_path);
+		dlog_print(DLOG_INFO, "Stagehand", "%s: open %s failed\n", __func__, vfs_path);
 
 	return fop_fd;
 }
@@ -192,7 +193,7 @@ static const struct lws_extension exts[] = {
 };
 
 
-int _server_main()
+int server_main(const char* stagehand_path, int port)
 {
 	struct lws_context_creation_info info;
 	struct lws_vhost *vhost;
@@ -212,7 +213,10 @@ int _server_main()
 	 * from the stack otherwise
 	 */
 	memset(&info, 0, sizeof info);
-	info.port = 27000;
+	info.port = port;
+
+	resource_path = stagehand_path;
+	resource_path_length = strlen(resource_path);
 
 
 	signal(SIGINT, sighandler);
@@ -228,7 +232,7 @@ int _server_main()
 	lwsl_notice("libwebsockets test server - license LGPL2.1+SLE\n");
 	lwsl_notice("(C) Copyright 2010-2017 Andy Green <andy@warmcat.com>\n");
 
-	printf("Using resource path \"%s\"\n", resource_path);
+	dlog_print(DLOG_INFO, "Stagehand", "Using resource path \"%s\"\n", resource_path);
 
 	info.iface = iface;
 	info.protocols = protocols;
@@ -294,7 +298,7 @@ int _server_main()
 	/* stash original platform fops */
 	fops_plat = *(lws_get_fops(context));
 	/* override the active fops */
-	lws_get_fops(context)->open = test_server_fops_open;
+	lws_get_fops(context)->open = stagehandzip_fops_open;
 	lws_get_fops(context)->close = fops_zip.close;
 	lws_get_fops(context)->read = fops_zip.read;
 	lws_get_fops(context)->seek_cur = fops_zip.seek_cur;
@@ -330,9 +334,4 @@ int _server_main()
 #endif
 
 	return 0;
-}
-
-
-int server_main() {
-	return _server_main();
 }

@@ -13,9 +13,9 @@ extern "C" {
 #endif
 
 void startListeningSocketThread();
-void startServer();
+void startServer(const char* stagehand_path, int port);
 // This method is exported from stagehand.so
-EXPORT_API bool startstagehand1(void);
+EXPORT_API bool startstagehand1(const char* stagehand_path, int port);
 
 #ifdef __cplusplus
 }
