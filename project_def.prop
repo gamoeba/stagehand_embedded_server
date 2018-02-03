@@ -9,7 +9,7 @@ type = sharedLib
 profile = wearable-3.0
 
 # C/CPP Sources
-USER_SRCS = src/server/stagehandserver.c src/server/stagehandserver-sh.c src/stagehand.c src/server/stagehand.c src/server/stagehandserver-http.c src/automation.cpp src/m.cpp 
+USER_SRCS = src/server/stagehandserver.c src/server/stagehandserver-sh.c src/stagehand.c src/server/stagehandserver-http.c src/automation.cpp src/m.cpp 
 
 # EDC Sources
 USER_EDCS =  

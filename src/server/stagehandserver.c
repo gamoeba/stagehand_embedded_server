@@ -37,7 +37,7 @@ struct lws_plat_file_ops fops_plat;
 
 extern struct lws_plat_file_ops fops_mem;
 
-char *resource_path;
+const char *resource_path;
 int resource_path_length;
 //#if defined(LWS_OPENSSL_SUPPORT) && defined(LWS_HAVE_SSL_CTX_set1_param)
 //char crl_path[1024] = "";
